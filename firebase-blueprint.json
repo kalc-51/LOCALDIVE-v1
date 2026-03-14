@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Information about the registered user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "User's public name" },
+        "email": { "type": "string", "description": "User's email address" },
+        "photoURL": { "type": "string", "description": "URL to user's profile picture" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the account was created" }
+      },
+      "required": ["uid", "email"]
+    },
+    "DetourLog": {
+      "title": "Detour Log",
+      "description": "A record of a completed detour journey.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "UID of the user who created this log" },
+        "userName": { "type": "string", "description": "Name of the user" },
+        "date": { "type": "string", "description": "Date of the detour" },
+        "spots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "category": { "type": "string" }
+            }
+          }
+        },
+        "comment": { "type": "string", "description": "User's reflection on the detour" },
+        "isPublic": { "type": "boolean", "description": "Whether this log is shared with the community" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "date", "spots"]
+    },
+    "SpotLike": {
+      "title": "Spot Like",
+      "description": "A user's like for a specific spot.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "UID of the user who liked" },
+        "spotId": { "type": "string", "description": "ID of the spot liked" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "spotId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/logs/{logId}": {
+      "schema": "DetourLog",
+      "description": "Collection of detour logs"
+    },
+    "/likes/{likeId}": {
+      "schema": "SpotLike",
+      "description": "Collection of spot likes"
+    }
+  }
+}

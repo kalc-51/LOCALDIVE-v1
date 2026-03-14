@@ -1,0 +1,108 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - uid: string (required)
+//   - displayName: string
+//   - email: string (required)
+//   - photoURL: string
+//   - createdAt: string
+//
+// Collection: logs
+// Document ID: {logId}
+// Fields:
+//   - uid: string (required) - Owner of the log
+//   - userName: string
+//   - date: string (required)
+//   - spots: list (required) - Array of spot objects
+//   - comment: string
+//   - isPublic: bool
+//   - createdAt: timestamp
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "kan.localconnect@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.uid is string && data.email is string;
+    }
+
+    function isValidLog(data) {
+      return data.uid is string && 
+             data.date is string && 
+             data.spots is list &&
+             (!('comment' in data) || (data.comment is string && data.comment.size() < 1000)) &&
+             (!('isPublic' in data) || data.isPublic is bool);
+    }
+
+    function isValidLike(data) {
+      return data.uid is string && data.spotId is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.uid == resource.data.uid;
+    }
+
+    match /logs/{logId} {
+      // Public logs are readable by anyone authenticated, private logs only by owner
+      allow read: if isAuthenticated() && (resource.data.isPublic == true || resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid && isValidLog(request.resource.data);
+      allow update: if isDocOwner() && isValidLog(request.resource.data) && request.resource.data.uid == resource.data.uid;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /likes/{likeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+                      request.resource.data.uid == request.auth.uid && 
+                      isValidLike(request.resource.data) &&
+                      hasOnlyAllowedFields(['uid', 'spotId', 'createdAt']);
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+    
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

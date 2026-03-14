@@ -1,0 +1,7 @@
+{
+  "name": "LOCAL DIVE",
+  "description": "",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
